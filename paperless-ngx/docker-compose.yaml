@@ -1,0 +1,59 @@
+services:
+
+  broker:
+    image: docker.io/library/redis
+    container_name: paperless-redis
+    restart: always
+    user: "1026:100"
+    volumes:
+      - ./redis:/data
+    networks:
+      - paperless-network
+
+  db:
+    image: docker.io/library/postgres:17
+    container_name: paperless-db
+    restart: always
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ???
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - paperless-network
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-web
+    restart: always
+    depends_on:
+      - broker
+      - db
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: ???
+      PAPERLESS_SECRET_KEY: ???
+      PAPERLESS_URL: http://localhost:8000
+      PAPERLESS_ALLOWED_HOSTS: "*"
+      PAPERLESS_ADMIN_USER: admin
+      PAPERLESS_ADMIN_PASSWORD: ???
+      UID: 1026
+      GID: 100
+
+    volumes:
+      - ./data:/usr/src/paperless/data
+      - ./media:/usr/src/paperless/media
+      - ./export:/usr/src/paperless/export
+      - ./consume:/usr/src/paperless/consume
+    ports:
+      - 8111:8000
+    networks:
+      - paperless-network
+
+networks:
+  paperless-network:
+    driver: bridge
